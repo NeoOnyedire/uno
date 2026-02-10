@@ -111,7 +111,7 @@ def player_moves(player_hand, discard, deck, current_color):
     print(f"└────────────────────────────────────────────┘")
     
     # Always show FULL hand with playable indicators
-    print("\nYour hand:")
+    print("\nYour hand:🫴")
     for i, card in enumerate(player_hand, 1):
         card_text = card_to_str(card)
         prefix = "→ " if can_play(card, discard, current_color) else "  "
@@ -122,11 +122,11 @@ def player_moves(player_hand, discard, deck, current_color):
     valid_cards = [card for card in player_hand if can_play(card, discard, current_color)]
     
     if valid_cards:
-        print("Playable cards:")
+        print("Playable cards:🫴")
         for i, card in enumerate(valid_cards, 1):
             print(f"  {i:2d}: {card_to_str(card)}")
     else:
-        print("No playable cards in hand.")
+        print("No playable cards in hand.🤷‍♂")
     
     # Always offer draw option
     while True:
@@ -137,7 +137,7 @@ def player_moves(player_hand, discard, deck, current_color):
         if choice == "":
             print("→ Drawing 1 card...")
             if not deck:
-                print("Deck empty — reshuffling discard pile (except top card)...")
+                print("Deck empty — reshuffling discard pile (except top card)...🔀")
                 # Simple reshuffle logic (you can improve this later)
                 if len(discard) > 1:
                     top = discard.pop()
@@ -154,13 +154,13 @@ def player_moves(player_hand, discard, deck, current_color):
                 if can_play(drawn, discard, current_color):
                     play_now = input("Play this card now? (y/n): ").lower().strip()
                     if play_now in ('y', 'yes'):
-                        print(f"You played {card_to_str(drawn)}")
+                        print(f"You played {card_to_str(drawn)}?👀")
                         discard.append(drawn)
                         player_hand.remove(drawn)
                         
                         # UNO! reminder
                         if len(player_hand) == 1:
-                            input("You have 1 card left — say 'UNO!' (press Enter)...")
+                            input("You have 1 card left — say 'UNO!' (press Enter)...😱")
                         
                         # Handle wild color choice
                         if drawn[0] == "Black":
@@ -196,7 +196,7 @@ def player_moves(player_hand, discard, deck, current_color):
                 
                 # UNO! reminder
                 if len(player_hand) == 1:
-                    input("You have 1 card left — say 'UNO!' (press Enter)...")
+                    input("You have 1 card left — say 'UNO!' (press Enter)...😱")
                 
                 if card_to_play[0] == "Black":
                     colors = ["Red", "Yellow", "Blue", "Green"]
@@ -220,7 +220,7 @@ def player_moves(player_hand, discard, deck, current_color):
             else:
                 print(f"Please choose a number between 1 and {len(valid_cards)}")
         except ValueError:
-            print("Invalid input — enter a number or press Enter to draw")
+            print("Invalid input — enter a number or press Enter to draw🙄")
 
 def cpu_moves(cpu_hand, discard, deck, current_color):
     valid_cards = [card for card in cpu_hand if can_play(card, discard, current_color)]
@@ -232,7 +232,7 @@ def cpu_moves(cpu_hand, discard, deck, current_color):
         
         # UNO! for CPU
         if len(cpu_hand) == 1:
-            print("CPU says UNO!")
+            print("CPU says UNO!🫣")
         
         if card_to_play[0] == "Black":
             color_choice = random.choice(["Red", "Yellow", "Blue", "Green"])
@@ -242,17 +242,17 @@ def cpu_moves(cpu_hand, discard, deck, current_color):
             action = card_to_play[1] if isinstance(card_to_play[1], str) else None
             return card_to_play, action, deck
     
-    print("CPU has no valid cards → draws 1 card.")
+    print("CPU has no valid cards → draws 1 card.🤔")
     draw_card(deck, cpu_hand)
 
     if cpu_hand:
         new_card = cpu_hand[-1]
         if can_play(new_card, discard, current_color):
-            print(f"CPU drew {card_to_str(new_card)} and plays it!")
+            print(f"CPU drew {card_to_str(new_card)} and plays it!🦾")
             discard.append(new_card)
             cpu_hand.remove(new_card)
             if len(cpu_hand) == 1:
-                print("CPU says UNO!")
+                print("CPU says UNO!🫣")
             if new_card[0] == "Black":
                 color_choice = random.choice(["Red", "Yellow", "Blue", "Green"])
                 print(f"CPU chooses {colored(color_choice, color_choice)}")
@@ -325,9 +325,9 @@ def gameplay():
 
     print("\n" + "="*50)
     if not player_hand:
-        print(colored("  YOU WIN!  ", "Green"))
+        print(colored("  YOU WIN!🤝  ", "Green"))
     else:
-        print(colored("  CPU WINS!  ", "Red"))
+        print(colored("  CPU WINS!😂🫵 ", "Red"))
     print("="*50)
 
 if __name__ == "__main__":
