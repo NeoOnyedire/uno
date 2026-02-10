@@ -263,9 +263,9 @@ def cpu_moves(cpu_hand, discard, deck, current_color):
     return None, None, deck
 
 def gameplay():
-    player_hand, cpu_hand, deck, discard, current_color = deal_hand()  # updated call
+    player_hand, cpu_hand, deck, discard, current_color = deal_hand()
     turn_direction = 1
-    skip_next = False  # for Skip / +2 / +4
+    skip_next = False
 
     print("\n" + "="*50)
     print("               UNO GAME STARTED")
@@ -274,13 +274,19 @@ def gameplay():
     while player_hand and cpu_hand:
         if skip_next:
             skip_next = False
-            continue  # skip this turn
+            # Skip happened → advance to next player
+            turn_direction *= -1  # in 2-player game this switches player
+            continue
 
         if turn_direction == 1:
             print(f"\n{colored('PLAYER TURN', 'Yellow')}")
             player_card, action, deck = player_moves(player_hand, discard, deck, current_color)
-            if player_card:
+
+            played = player_card is not None
+
+            if played:
                 current_color = player_card[0] if player_card[0] != "Black" else action
+
                 if action == "Skip":
                     skip_next = True
                 elif action == "Reverse":
@@ -289,11 +295,16 @@ def gameplay():
                     draw_count = 2 if action == "+2" else 4
                     draw_card(deck, cpu_hand, draw_count)
                     skip_next = True
+
         else:
             print(f"\n{colored('CPU TURN', 'Magenta')}")
             cpu_card, action, deck = cpu_moves(cpu_hand, discard, deck, current_color)
-            if cpu_card:
+
+            played = cpu_card is not None
+
+            if played:
                 current_color = cpu_card[0] if cpu_card[0] != "Black" else action
+
                 if action == "Skip":
                     skip_next = True
                 elif action == "Reverse":
@@ -303,9 +314,14 @@ def gameplay():
                     draw_card(deck, player_hand, draw_count)
                     skip_next = True
 
+        # Always advance turn (unless skipped)
+        if not skip_next:
+            turn_direction *= -1   # switch between player and CPU
+
         print(f"Current color: {colored(current_color, current_color)}")
         print(f"  Player cards left: {len(player_hand)}")
         print(f"  CPU cards left:    {len(cpu_hand)}")
+        print("\n" + "-"*50)
 
     print("\n" + "="*50)
     if not player_hand:
