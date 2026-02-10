@@ -110,128 +110,117 @@ def player_moves(player_hand, discard, deck, current_color):
     print(f"│ Current color: {colored(current_color, current_color):<10}  Top card: {top_str} │")
     print(f"└────────────────────────────────────────────┘")
     
-    # Always show FULL hand with indices
+    # Always show FULL hand with playable indicators
     print("\nYour hand:")
-    playable_indices = []  # track which positions are playable
     for i, card in enumerate(player_hand, 1):
         card_text = card_to_str(card)
         prefix = "→ " if can_play(card, discard, current_color) else "  "
-        if prefix == "→ ":
-            playable_indices.append(i)
         print(f"  {i:2d}: {prefix}{card_text}")
     
-    print()  # small spacing
+    print()  # spacing
     
     valid_cards = [card for card in player_hand if can_play(card, discard, current_color)]
     
     if valid_cards:
-        print("You can play these cards:")
+        print("Playable cards:")
         for i, card in enumerate(valid_cards, 1):
             print(f"  {i:2d}: {card_to_str(card)}")
-        
-        while True:
-            try:
-                choice = input("\nEnter number to play (or press Enter to draw): ").strip()
-                if choice == "":
-                    print("→ Drawing 1 card...")
-                    draw_card(deck, player_hand)
-                    # Official: after draw 1, you can play it if it matches
-                    new_card = player_hand[-1]
-                    if can_play(new_card, discard, current_color):
-                        play_now = input(f"Drew {card_to_str(new_card)} — play it now? (y/n): ").lower()
-                        if play_now == 'y':
-                            print(f"You played {card_to_str(new_card)}")
-                            discard.append(new_card)
-                            player_hand.remove(new_card)
-                            if new_card[0] == "Black":
-                                colors = ["Red", "Yellow", "Blue", "Green"]
-                                print("\nChoose next color:")
-                                for j, col in enumerate(colors, 1):
-                                    print(f"  {j}: {colored(col, col)}")
-                                while True:
-                                    try:
-                                        col_idx = int(input("→ Enter number: ")) - 1
-                                        if 0 <= col_idx < 4:
-                                            color_choice = colors[col_idx]
-                                            print(f"→ Color set to {colored(color_choice, color_choice)}")
-                                            return new_card, color_choice, deck
-                                    except:
-                                        pass
-                                print("Invalid → defaulting to Red")
-                                return new_card, "Red", deck
-                            action = new_card[1] if isinstance(new_card[1], str) else None
-                            return new_card, action, deck
-                    return None, None, deck
-                
-                card_index = int(choice) - 1
-                if 0 <= card_index < len(valid_cards):
-                    card_to_play = valid_cards[card_index]
-                    print(f"You played {card_to_str(card_to_play)}")
-                    discard.append(card_to_play)
-                    player_hand.remove(card_to_play)
-                    
-                    # UNO! check
-                    if len(player_hand) == 1:
-                        input("You have 1 card left — say 'UNO!' (press Enter)...")
-                    
-                    if card_to_play[0] == "Black":
-                        colors = ["Red", "Yellow", "Blue", "Green"]
-                        print("\nChoose next color:")
-                        for j, col in enumerate(colors, 1):
-                            print(f"  {j}: {colored(col, col)}")
-                        while True:
-                            try:
-                                col_idx = int(input("→ Enter number: ")) - 1
-                                if 0 <= col_idx < 4:
-                                    color_choice = colors[col_idx]
-                                    print(f"→ Color set to {colored(color_choice, color_choice)}")
-                                    return card_to_play, color_choice, deck
-                            except:
-                                pass
-                        print("Invalid → defaulting to Red")
-                        return card_to_play, "Red", deck
-                    
-                    action = card_to_play[1] if isinstance(card_to_play[1], str) else None
-                    return card_to_play, action, deck
-                else:
-                    print(f"Number must be between 1 and {len(valid_cards)}")
-            except ValueError:
-                print("Please enter a number (or press Enter to draw)")
     else:
-        print("No playable cards → drawing 1 card...")
-        draw_card(deck, player_hand)
-        if player_hand:
-            new_card = player_hand[-1]
-            print(f"  Drew: {card_to_str(new_card)}")
-            # Official: check if drawable card can be played
-            if can_play(new_card, discard, current_color):
-                play_now = input("Play it now? (y/n): ").lower()
-                if play_now == 'y':
-                    print(f"You played {card_to_str(new_card)}")
-                    discard.append(new_card)
-                    player_hand.remove(new_card)
-                    # UNO! check
-                    if len(player_hand) == 1:
-                        input("You have 1 card left — say 'UNO!' (press Enter)...")
-                    if new_card[0] == "Black":
-                        colors = ["Red", "Yellow", "Blue", "Green"]
-                        print("\nChoose next color:")
-                        for j, col in enumerate(colors, 1):
-                            print(f"  {j}: {colored(col, col)}")
-                        while True:
-                            try:
-                                col_idx = int(input("→ Enter number: ")) - 1
-                                if 0 <= col_idx < 4:
-                                    color_choice = colors[col_idx]
-                                    print(f"→ Color set to {colored(color_choice, color_choice)}")
-                                    return new_card, color_choice, deck
-                            except:
-                                pass
-                        print("Invalid → defaulting to Red")
-                        return new_card, "Red", deck
-                    action = new_card[1] if isinstance(new_card[1], str) else None
-                    return new_card, action, deck
-        return None, None, deck
+        print("No playable cards in hand.")
+    
+    # Always offer draw option
+    while True:
+        prompt = "\nEnter number to play, or press Enter to draw: "
+        choice = input(prompt).strip()
+        
+        # Player chose to draw
+        if choice == "":
+            print("→ Drawing 1 card...")
+            if not deck:
+                print("Deck empty — reshuffling discard pile (except top card)...")
+                # Simple reshuffle logic (you can improve this later)
+                if len(discard) > 1:
+                    top = discard.pop()
+                    random.shuffle(discard)
+                    deck.extend(discard)
+                    discard = [top]
+            
+            draw_card(deck, player_hand, 1)
+            if player_hand:
+                drawn = player_hand[-1]
+                print(f"  Drew: {card_to_str(drawn)}")
+                
+                # Offer to play the drawn card (official-like behavior)
+                if can_play(drawn, discard, current_color):
+                    play_now = input("Play this card now? (y/n): ").lower().strip()
+                    if play_now in ('y', 'yes'):
+                        print(f"You played {card_to_str(drawn)}")
+                        discard.append(drawn)
+                        player_hand.remove(drawn)
+                        
+                        # UNO! reminder
+                        if len(player_hand) == 1:
+                            input("You have 1 card left — say 'UNO!' (press Enter)...")
+                        
+                        # Handle wild color choice
+                        if drawn[0] == "Black":
+                            colors = ["Red", "Yellow", "Blue", "Green"]
+                            print("\nChoose next color:")
+                            for j, col in enumerate(colors, 1):
+                                print(f"  {j}: {colored(col, col)}")
+                            while True:
+                                try:
+                                    col_idx = int(input("→ Enter number: ")) - 1
+                                    if 0 <= col_idx < 4:
+                                        color_choice = colors[col_idx]
+                                        print(f"→ Color set to {colored(color_choice, color_choice)}")
+                                        return drawn, color_choice, deck
+                                except:
+                                    pass
+                            print("Invalid → defaulting to Red")
+                            return drawn, "Red", deck
+                        
+                        action = drawn[1] if isinstance(drawn[1], str) else None
+                        return drawn, action, deck
+            
+            return None, None, deck  # drew but didn't play
+        
+        # Player chose to play a card
+        try:
+            card_index = int(choice) - 1
+            if 0 <= card_index < len(valid_cards):
+                card_to_play = valid_cards[card_index]
+                print(f"You played {card_to_str(card_to_play)}")
+                discard.append(card_to_play)
+                player_hand.remove(card_to_play)
+                
+                # UNO! reminder
+                if len(player_hand) == 1:
+                    input("You have 1 card left — say 'UNO!' (press Enter)...")
+                
+                if card_to_play[0] == "Black":
+                    colors = ["Red", "Yellow", "Blue", "Green"]
+                    print("\nChoose next color:")
+                    for j, col in enumerate(colors, 1):
+                        print(f"  {j}: {colored(col, col)}")
+                    while True:
+                        try:
+                            col_idx = int(input("→ Enter number: ")) - 1
+                            if 0 <= col_idx < 4:
+                                color_choice = colors[col_idx]
+                                print(f"→ Color set to {colored(color_choice, color_choice)}")
+                                return card_to_play, color_choice, deck
+                        except:
+                            pass
+                    print("Invalid → defaulting to Red")
+                    return card_to_play, "Red", deck
+                
+                action = card_to_play[1] if isinstance(card_to_play[1], str) else None
+                return card_to_play, action, deck
+            else:
+                print(f"Please choose a number between 1 and {len(valid_cards)}")
+        except ValueError:
+            print("Invalid input — enter a number or press Enter to draw")
 
 def cpu_moves(cpu_hand, discard, deck, current_color):
     valid_cards = [card for card in cpu_hand if can_play(card, discard, current_color)]
