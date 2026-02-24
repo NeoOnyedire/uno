@@ -329,7 +329,7 @@ def gameplay():
         print(colored("  CPU WINS!😂🫵 ", "Red"))
     print("="*50)
 
-
+gameplay()
 
 if __name__ == "__main__":
     gameplay()
