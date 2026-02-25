@@ -25,3 +25,14 @@ Play against a simple (but cheeky) CPU opponent — complete with Wild cards, +2
 
 ```bash
 pip install colorama
+
+## Multiplayer Mode (Local Network / LAN)
+
+Added basic **2-player online multiplayer** over sockets.
+
+### How to play with a friend on different PCs
+
+1. **One player runs the server**:
+   ```bash
+   cd multiplayer
+   python server.py
