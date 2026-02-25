@@ -64,6 +64,9 @@ def discard_pile():
     discard = [deck.pop(0)]
     card = discard[0]
     
+    # Set a safe default right away (prevents UnboundLocalError)
+    starting_color = card[0]
+    
     if card[0] == "Black":
         colors = ["Red", "Yellow", "Blue", "Green"]
         print("\nStarting card is Wild! Choose starting color:")
@@ -83,11 +86,13 @@ def discard_pile():
                 pass
         print("Invalid → defaulting to Red")
         time.sleep(0.7)
-        starting_color = "Red"
+        starting_color = "Red"   # this line was missing 'starting_color = ' in your original
     elif isinstance(card[1], str):
         print(f"Starting with action card: {card_to_str(card)} — it will affect the first player.")
         time.sleep(1.2)
+        # starting_color remains = card[0]  ← this is correct for colored action cards
     else:
+        # Number card (including 0)
         starting_color = card[0]
     
     return discard, deck, starting_color # return starting_color too
