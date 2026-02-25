@@ -362,7 +362,7 @@ def gameplay():
             turn_direction *= -1 # switch between player and CPU
         
         print(f"Current color: {colored(current_color, current_color)}")
-        time.sleep(0.6)
+        time.sleep(0.3)
         print(f" Player cards left: {len(player_hand)}")
         time.sleep(0.5)
         print(f" CPU cards left: {len(cpu_hand)}")
@@ -371,7 +371,7 @@ def gameplay():
         time.sleep(0.8)
     
     print("\n" + "="*50)
-    time.sleep(0.6)
+    time.sleep(0.3)
     if not player_hand:
         print(colored(" YOU WIN!🤝 ", "Green"))
     else:
@@ -388,6 +388,5 @@ if __name__ == "__main__":
     # Normal single-player flow continues...
     print("Welcome to UNO by Neo Onyedire")
     print("Running single-player vs computer mode...\n")
-    time.sleep(1.2)
-    gameplay() 
+    time.sleep(0.5)
     gameplay()
