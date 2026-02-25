@@ -5,18 +5,7 @@ init(autoreset=True)
 
 
 import sys
-
-if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] in ["--multi", "--server", "--client"]:
-        print("Multiplayer mode requires separate files (server.py & client.py)")
-        print("Please see the multiplayer/ folder or updated README.md")
-        sys.exit(0)
-    
-    # Normal single-player flow continues...
-    print("Welcome to UNO by Neo Onyedire")
-    print("Running single-player vs computer mode...\n")
-    time.sleep(1.2)
-    gameplay()   # ← your original function
+  # ← your original function
 
 # Simple color mapping
 COLOR_MAP = {
@@ -391,4 +380,14 @@ def gameplay():
     print("="*50)
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] in ["--multi", "--server", "--client"]:
+        print("Multiplayer mode requires separate files (server.py & client.py)")
+        print("Please see the multiplayer/ folder or updated README.md")
+        sys.exit(0)
+    
+    # Normal single-player flow continues...
+    print("Welcome to UNO by Neo Onyedire")
+    print("Running single-player vs computer mode...\n")
+    time.sleep(1.2)
+    gameplay() 
     gameplay()
