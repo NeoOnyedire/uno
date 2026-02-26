@@ -398,7 +398,7 @@ def cpu_moves(cpu_hand, discard, deck, current_color):
 
         if card_to_play[0] == "Black":
             color_choice = random.choice(["Red", "Yellow", "Blue", "Green"])
-            print(f"CPU chooses {colored(color_choice, color_choice)}")
+            print(f"CPU played {card_to_str(card_to_play)} and chose {colored(color_choice, color_choice)}")
             time.sleep(0.9)
             return card_to_play, color_choice, deck
         else:
