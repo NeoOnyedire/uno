@@ -450,11 +450,11 @@ def gameplay():
     prev_color = None  # to detect color changes (optional)
 
     print("\n" + "="*50)
-    time.sleep(0.6)
+    time.sleep(0.4)
     print(" UNO GAME STARTED")
-    time.sleep(1.0)
+    time.sleep(0.6)
     print("="*50)
-    time.sleep(1.2)
+    time.sleep(0.8)
 
     while player_hand and cpu_hand:
         if skip_next:
@@ -463,7 +463,7 @@ def gameplay():
 
         if turn_direction == 1:
             print(f"\n{colored('PLAYER TURN', 'Yellow')}")
-            time.sleep(0.8)
+            time.sleep(0.4)
             player_card, action, deck = player_moves(player_hand, discard, deck, current_color)
             played = player_card is not None
 
