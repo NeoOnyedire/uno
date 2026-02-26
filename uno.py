@@ -473,7 +473,7 @@ def gameplay():
 
                 if current_color != old_color:
                     print(f"→ Color changed to {colored(current_color, current_color)}")
-                    time.sleep(0.6)
+                    time.sleep(0.4)
 
                 if action == "Skip":
                     skip_next = True
