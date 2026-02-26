@@ -6,7 +6,7 @@ from colorama import init, Fore, Style
 init(autoreset=True)
 
 # ────────────────────────────────────────────────
-#   SASSY CPU REPLIES DICTIONARIES
+#   CPU REPLIES DICTIONARIES
 # ────────────────────────────────────────────────
 
 CPU_SASS_ON_PLAYED_BY_PLAYER = {
@@ -90,19 +90,12 @@ PLAYER_UNO_TAUNTS = [
 # ────────────────────────────────────────────────
 
 def cpu_sassy_comment(card, is_player_played=False):
-    """
-    Returns a random cheeky comment based on:
-    - what card was just played
-    - who played it (player = True → more savage, CPU = False → confident)
-    """
-    value = card[1] if not isinstance(card[1], int) else "+number"  # treat numbers as one group
+    value = card[1] if not isinstance(card[1], int) else "+number"
 
     if is_player_played:
-        # Player just played → roast them
         if value in CPU_SASS_ON_PLAYED_BY_PLAYER:
             return random.choice(CPU_SASS_ON_PLAYED_BY_PLAYER[value])
         else:
-            # Normal number card played by player
             return random.choice([
                 "A number card? Revolutionary.",
                 "Playing it safe again, huh?",
@@ -111,12 +104,11 @@ def cpu_sassy_comment(card, is_player_played=False):
                 "Numbers. How original."
             ])
     else:
-        # CPU just played → brag a little
         return random.choice(CPU_SASS_WHEN_CPU_PLAYS)
 
 
 # ────────────────────────────────────────────────
-#   COLOR & CARD DISPLAY HELPERS (unchanged)
+#   COLOR & CARD DISPLAY HELPERS
 # ────────────────────────────────────────────────
 
 COLOR_MAP = {
@@ -150,7 +142,7 @@ def card_to_str(card):
 
 
 # ────────────────────────────────────────────────
-#   GAME LOGIC FUNCTIONS (mostly unchanged)
+#   GAME LOGIC FUNCTIONS
 # ────────────────────────────────────────────────
 
 def card_deck():
@@ -227,7 +219,7 @@ def draw_card(deck, hand, count=1):
 
 
 # ────────────────────────────────────────────────
-#   PLAYER MOVE (with CPU sass when player plays special)
+#   PLAYER MOVE
 # ────────────────────────────────────────────────
 
 def player_moves(player_hand, discard, deck, current_color):
@@ -267,7 +259,6 @@ def player_moves(player_hand, discard, deck, current_color):
         prompt = "\nEnter number to play, or press Enter to draw: "
         choice = input(prompt).strip()
 
-        # Draw
         if choice == "":
             print("→ Drawing 1 card...")
             time.sleep(0.5)
@@ -299,7 +290,6 @@ def player_moves(player_hand, discard, deck, current_color):
                         if len(player_hand) == 1:
                             input("You have 1 card left — say 'UNO!' (press Enter)...😱")
                             time.sleep(0.6)
-                            # Optional: CPU taunts when YOU say UNO
                             if random.random() < 0.6:
                                 print(f"CPU: {random.choice(PLAYER_UNO_TAUNTS)}")
                                 time.sleep(1.0)
@@ -330,7 +320,6 @@ def player_moves(player_hand, discard, deck, current_color):
 
             return None, None, deck
 
-        # Play card
         try:
             card_index = int(choice) - 1
             if 0 <= card_index < len(valid_cards):
@@ -347,7 +336,6 @@ def player_moves(player_hand, discard, deck, current_color):
                         print(f"CPU: {random.choice(PLAYER_UNO_TAUNTS)}")
                         time.sleep(1.0)
 
-                # CPU sasses your special play
                 if card_to_play[0] == "Black" or isinstance(card_to_play[1], str):
                     sass = cpu_sassy_comment(card_to_play, is_player_played=True)
                     print(f"CPU: {sass}")
@@ -385,7 +373,7 @@ def player_moves(player_hand, discard, deck, current_color):
 
 
 # ────────────────────────────────────────────────
-#   CPU MOVE (with self-brag sass)
+#   CPU MOVE
 # ────────────────────────────────────────────────
 
 def cpu_moves(cpu_hand, discard, deck, current_color):
@@ -452,13 +440,14 @@ def cpu_moves(cpu_hand, discard, deck, current_color):
 
 
 # ────────────────────────────────────────────────
-#   MAIN GAMEPLAY LOOP
+#   MAIN GAMEPLAY LOOP — FIXED SKIP / +2 / +4 LOGIC
 # ────────────────────────────────────────────────
 
 def gameplay():
     player_hand, cpu_hand, deck, discard, current_color = deal_hand()
     turn_direction = 1
     skip_next = False
+    prev_color = None  # to detect color changes (optional)
 
     print("\n" + "="*50)
     time.sleep(0.6)
@@ -470,7 +459,6 @@ def gameplay():
     while player_hand and cpu_hand:
         if skip_next:
             skip_next = False
-            turn_direction *= -1
             continue
 
         if turn_direction == 1:
@@ -480,7 +468,12 @@ def gameplay():
             played = player_card is not None
 
             if played:
+                old_color = current_color
                 current_color = player_card[0] if player_card[0] != "Black" else action
+
+                if current_color != old_color:
+                    print(f"→ Color changed to {colored(current_color, current_color)}")
+                    time.sleep(0.6)
 
                 if action == "Skip":
                     skip_next = True
@@ -497,7 +490,12 @@ def gameplay():
             played = cpu_card is not None
 
             if played:
+                old_color = current_color
                 current_color = cpu_card[0] if cpu_card[0] != "Black" else action
+
+                if current_color != old_color:
+                    print(f"→ Color changed to {colored(current_color, current_color)}")
+                    time.sleep(0.6)
 
                 if action == "Skip":
                     skip_next = True
@@ -508,16 +506,17 @@ def gameplay():
                     draw_card(deck, player_hand, draw_count)
                     skip_next = True
 
+        # Only flip if not skipped (and reverse already handled)
         if not skip_next:
-            turn_direction *= -1
+            if action != "Reverse":
+                turn_direction *= -1
 
-        print(f"Current color: {colored(current_color, current_color)}")
-        time.sleep(0.3)
+        # Only show counts + separator (no repeated current color)
         print(f" Player cards left: {len(player_hand)}")
         time.sleep(0.5)
         print(f" CPU cards left: {len(cpu_hand)}")
         time.sleep(0.7)
-        print("\n" + "-"*50)
+        print("\n" + "─"*50)  # lighter separator
         time.sleep(0.8)
 
     print("\n" + "="*50)
@@ -528,7 +527,6 @@ def gameplay():
         print(colored(" CPU WINS!😂🫵 ", "Red"))
     time.sleep(0.8)
     print("="*50)
-
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] in ["--multi", "--server", "--client"]:
