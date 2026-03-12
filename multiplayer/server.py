@@ -1,13 +1,11 @@
-# multiplayer/server.py
 import socket
 import threading
 import json
 import time
+import random
 from game_logic import create_deck, can_play, card_to_json, json_to_card, card_to_str, colored
 
-HOST = "0.0.0.0"          # Listen on all interfaces
-PORT = 55555              # Choose any free port > 1024
-
+# Globals at module level
 clients = []              # list of (conn, addr, name, hand)
 current_turn = 0
 deck = []
@@ -15,6 +13,9 @@ discard = []
 current_color = ""
 direction = 1
 skip_next = False
+
+HOST = "0.0.0.0"
+PORT = 55555
 
 def broadcast(message):
     for conn, _, _, _ in clients:
@@ -54,7 +55,6 @@ def start_game():
     else:
         current_color = top[0]
 
-    # Deal hands
     for _,_,_,hand in clients:
         hand[:] = [deck.pop() for _ in range(7)]
 
@@ -66,6 +66,9 @@ def broadcast_state():
         send_to_player(i, game_state_for_player(i))
 
 def handle_client(conn, addr):
+    # IMPORTANT: declare globals at the START of the function
+    global skip_next, direction, current_turn
+
     conn.send("Welcome! Enter your name: ".encode())
     name = conn.recv(1024).decode().strip() or f"Player{len(clients)+1}"
     
@@ -86,7 +89,7 @@ def handle_client(conn, addr):
             msg_type = msg.get("type")
 
             if msg_type == "play_card":
-                player_idx = [c[2] for c in clients].index(name)
+                player_idx = next(i for i, c in enumerate(clients) if c[2] == name)
                 if player_idx != current_turn:
                     send_to_player(player_idx, json.dumps({"type":"error", "msg":"Not your turn"}))
                     continue
@@ -103,9 +106,7 @@ def handle_client(conn, addr):
                         if card[0] != "Black":
                             current_color = card[0]
 
-                        # Handle actions (very simplified here — expand as needed)
                         action = card[1] if isinstance(card[1], str) else None
-                        global skip_next, direction, current_turn
 
                         if action == "Skip":
                             skip_next = True
@@ -121,37 +122,35 @@ def handle_client(conn, addr):
                         if card[0] == "Black":
                             current_color = msg.get("color", "Red")
 
-                        # UNO check
                         if len(hand) == 1:
                             broadcast(f"{name} says UNO!!!")
 
                         if len(hand) == 0:
                             broadcast(f"{name} WINS!!!")
-                            # end game logic here...
+                            # You can add sys.exit() or game end logic here
 
                         current_turn = (current_turn + (2 if skip_next else 1)) % len(clients)
-                        if skip_next: skip_next = False
+                        if skip_next:
+                            skip_next = False
                         broadcast_state()
                     else:
                         send_to_player(player_idx, json.dumps({"type":"error", "msg":"Illegal card"}))
         except:
             break
 
-    # Cleanup
-    clients.remove((conn,addr,name,hand))
+    clients.remove((conn, addr, name, hand))
     conn.close()
     broadcast(f"{name} left the game.")
 
 def game_loop():
     while True:
-        time.sleep(0.3)  # prevent cpu hog
-        # You can add timeout/draw logic here if needed
+        time.sleep(0.3)
 
 def main():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((HOST, PORT))
     server.listen()
-    print(f"Server started →  {HOST}:{PORT}")
+    print(f"Server started → {HOST}:{PORT}")
     print("Waiting for 2 players... (tell your friend your IP and port)")
 
     while True:
