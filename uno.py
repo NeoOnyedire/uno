@@ -227,9 +227,9 @@ def player_moves(player_hand, discard, deck, current_color):
     top_str = card_to_str(top_card)
 
     print(f"\n┌────────────────────────────────────────────┐")
-    time.sleep(0.3)
+    #time.sleep(0.3)
     print(f"│ Current color: {colored(current_color, current_color):<10} Top card: {top_str} │")
-    time.sleep(0.4)
+    #time.sleep(0.4)
     print(f"└────────────────────────────────────────────┘")
     time.sleep(0.5)
 
@@ -445,9 +445,9 @@ def cpu_moves(cpu_hand, discard, deck, current_color):
 
 def gameplay():
     player_hand, cpu_hand, deck, discard, current_color = deal_hand()
-    turn_direction = 1
+
+    current_player = "player"   # "player" or "cpu"
     skip_next = False
-    prev_color = None  # to detect color changes (optional)
 
     print("\n" + "="*50)
     time.sleep(0.4)
@@ -457,74 +457,121 @@ def gameplay():
     time.sleep(0.8)
 
     while player_hand and cpu_hand:
+
+        # Handle skip
         if skip_next:
+            print(f"\n⏭️  {current_player.upper()} TURN SKIPPED!")
+            time.sleep(0.8)
             skip_next = False
+
+            # switch player
+            current_player = "cpu" if current_player == "player" else "player"
             continue
 
-        if turn_direction == 1:
+        # ─────────────────────────────
+        # PLAYER TURN
+        # ─────────────────────────────
+        if current_player == "player":
             print(f"\n{colored('PLAYER TURN', 'Yellow')}")
             time.sleep(0.4)
-            player_card, action, deck = player_moves(player_hand, discard, deck, current_color)
-            played = player_card is not None
 
-            if played:
-                old_color = current_color
-                current_color = player_card[0] if player_card[0] != "Black" else action
+            played_card, action, deck = player_moves(
+                player_hand, discard, deck, current_color
+            )
 
-                if current_color != old_color:
-                    print(f"→ Color changed to {colored(current_color, current_color)}")
-                    time.sleep(0.4)
+            if played_card:
+                # Update color
+                if played_card[0] == "Black":
+                    current_color = action
+                else:
+                    current_color = played_card[0]
 
+                print(f"→ Color is now {colored(current_color, current_color)}")
+                time.sleep(0.4)
+
+                # Handle actions
                 if action == "Skip":
                     skip_next = True
+
                 elif action == "Reverse":
-                    turn_direction *= -1
+                    # In 2-player UNO → acts like Skip
+                    skip_next = True
+
                 elif action in ["+2", "+4"]:
                     draw_count = 2 if action == "+2" else 4
                     draw_card(deck, cpu_hand, draw_count)
+                    print(f"CPU draws {draw_count} cards!")
+                    time.sleep(0.6)
                     skip_next = True
+
+        # ─────────────────────────────
+        # CPU TURN
+        # ─────────────────────────────
         else:
             print(f"\n{colored('CPU TURN', 'Magenta')}")
             time.sleep(0.9)
-            cpu_card, action, deck = cpu_moves(cpu_hand, discard, deck, current_color)
-            played = cpu_card is not None
 
-            if played:
-                old_color = current_color
-                current_color = cpu_card[0] if cpu_card[0] != "Black" else action
+            played_card, action, deck = cpu_moves(
+                cpu_hand, discard, deck, current_color
+            )
 
-                if current_color != old_color:
-                    print(f"→ Color changed to {colored(current_color, current_color)}")
-                    time.sleep(0.6)
+            if played_card:
+                # Update color
+                if played_card[0] == "Black":
+                    current_color = action
+                else:
+                    current_color = played_card[0]
 
+                print(f"→ Color is now {colored(current_color, current_color)}")
+                time.sleep(0.6)
+
+                # Handle actions
                 if action == "Skip":
                     skip_next = True
+
                 elif action == "Reverse":
-                    turn_direction *= -1
+                    skip_next = True
+
                 elif action in ["+2", "+4"]:
                     draw_count = 2 if action == "+2" else 4
                     draw_card(deck, player_hand, draw_count)
+                    print(f"You draw {draw_count} cards!")
+                    time.sleep(0.6)
                     skip_next = True
 
-        # Only flip if not skipped (and reverse already handled)
-        if not skip_next:
-            if action != "Reverse":
-                turn_direction *= -1
+        # ─────────────────────────────
+        # CHECK WIN CONDITION
+        # ─────────────────────────────
+        if not player_hand or not cpu_hand:
+            break
 
-        # Only show counts + separator (no repeated current color)
-        print(f" Player cards left: {len(player_hand)}")
+        # ─────────────────────────────
+        # SWITCH TURN (ALWAYS)
+        # ─────────────────────────────
+        current_player = "cpu" if current_player == "player" else "player"
+
+        # ─────────────────────────────
+        # STATUS DISPLAY
+        # ─────────────────────────────
         time.sleep(0.5)
+        print(f" Player cards left: {len(player_hand)}")
+        time.sleep(0.4)
         print(f" CPU cards left: {len(cpu_hand)}")
         time.sleep(0.7)
-        print("\n" + "─"*50)  # lighter separator
+        print("\n" + "─"*50)
         time.sleep(0.8)
 
+    # ─────────────────────────────
+    # GAME OVER
+    # ─────────────────────────────
     print("\n" + "="*50)
     time.sleep(0.3)
+
     if not player_hand:
         print(colored(" YOU WIN!🤝 ", "Green"))
     else:
         print(colored(" CPU WINS!😂🫵 ", "Red"))
+
     time.sleep(0.8)
     print("="*50)
 
