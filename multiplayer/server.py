@@ -2,9 +2,13 @@ import socket
 import threading
 import json
 import random
-from game_logic import create_deck, can_play, card_to_json, json_to_card, card_to_str
+from game_logic import create_deck, can_play, card_to_json, card_to_str
+
+HOST = "0.0.0.0"
+PORT = 55555
 
 clients = []
+waiting_clients = []
 clients_lock = threading.Lock()
 current_turn = 0
 deck = []
@@ -13,8 +17,8 @@ current_color = ""
 direction = 1
 game_started = False
 
-HOST = "0.0.0.0"
-PORT = 55555
+MIN_PLAYERS = 2
+MAX_PLAYERS = 8
 
 
 def send_json(conn, payload):
@@ -24,16 +28,14 @@ def send_json(conn, payload):
         pass
 
 
-def broadcast(payload):
-    with clients_lock:
-        for client in clients:
-            send_json(client["conn"], payload)
-
-
-def send_to_player(idx, payload):
-    with clients_lock:
-        if 0 <= idx < len(clients):
-            send_json(clients[idx]["conn"], payload)
+def broadcast(payload, target_clients=None):
+    if target_clients is None:
+        with clients_lock:
+            recipients = list(clients)
+    else:
+        recipients = list(target_clients)
+    for client in recipients:
+        send_json(client["conn"], payload)
 
 
 def receive_message(conn):
@@ -70,8 +72,10 @@ def game_state_for_player(idx):
 
 def broadcast_state():
     with clients_lock:
-        for i in range(len(clients)):
-            send_to_player(i, game_state_for_player(i))
+        recipients = list(clients)
+        states = [game_state_for_player(i) for i in range(len(recipients))]
+    for client, state in zip(recipients, states):
+        send_json(client["conn"], state)
 
 
 def refill_deck_if_needed():
@@ -93,29 +97,48 @@ def reset_game():
     game_started = False
 
 
+def promote_waiting_clients():
+    with clients_lock:
+        if waiting_clients:
+            clients.extend(waiting_clients)
+            waiting_clients.clear()
+            broadcast({"type": "info", "msg": f"{len(clients)} players are now in the lobby for the next game."})
+
+
+def available_players():
+    with clients_lock:
+        return len(clients)
+
+
 def start_game():
     global deck, discard, current_color, current_turn, game_started
-    deck = create_deck()
-    discard = [deck.pop()]
-    top = discard[0]
-
-    if top[0] == "Black":
-        current_color = random.choice(["Red", "Yellow", "Blue", "Green"])
-    else:
-        current_color = top[0]
-
     with clients_lock:
+        if game_started or len(clients) < MIN_PLAYERS:
+            return False
+        deck = create_deck()
+        discard = [deck.pop()]
+        top = discard[0]
+
+        if top[0] == "Black":
+            current_color = random.choice(["Red", "Yellow", "Blue", "Green"])
+        else:
+            current_color = top[0]
+
         for client in clients:
             client["hand"] = [deck.pop() for _ in range(7)]
 
-    game_started = True
-    broadcast({"type": "info", "msg": "GAME STARTED!"})
+        current_turn = 0
+        game_started = True
+
+    broadcast({"type": "info", "msg": f"GAME STARTED with {len(clients)} players!"})
     broadcast_state()
+    return True
 
 
-def get_player_index(conn):
+def get_player_index(conn, from_waiting=False):
+    search_list = waiting_clients if from_waiting else clients
     with clients_lock:
-        for idx, client in enumerate(clients):
+        for idx, client in enumerate(search_list):
             if client["conn"] == conn:
                 return idx
     return None
@@ -131,17 +154,21 @@ def handle_client(conn, addr):
         return
 
     if isinstance(incoming, dict) and incoming.get("type") == "join":
-        name = str(incoming.get("name", "")).strip() or f"Player{len(clients)+1}"
+        name = str(incoming.get("name", "")).strip() or f"Player{available_players()+1}"
     else:
-        name = str(incoming).strip() or f"Player{len(clients)+1}"
+        name = str(incoming).strip() or f"Player{available_players()+1}"
 
     client_data = {"conn": conn, "addr": addr, "name": name, "hand": []}
     with clients_lock:
-        clients.append(client_data)
-        broadcast({"type": "info", "msg": f"{name} has joined the game!"})
-
-    if len(clients) == 2 and not game_started:
-        start_game()
+        if game_started:
+            waiting_clients.append(client_data)
+            send_json(conn, {"type": "info", "msg": "Game already in progress. You are in the lobby and will join the next round."})
+            broadcast({"type": "info", "msg": f"{name} has joined the lobby ({len(waiting_clients)} waiting)."}, target_clients=waiting_clients)
+        else:
+            clients.append(client_data)
+            broadcast({"type": "info", "msg": f"{name} has joined the lobby. ({len(clients)} connected)"})
+            if len(clients) >= MAX_PLAYERS:
+                start_game()
 
     while True:
         message = receive_message(conn)
@@ -156,28 +183,29 @@ def handle_client(conn, addr):
         if msg_type == "play_card":
             player_idx = get_player_index(conn)
             if player_idx is None:
-                break
+                send_json(conn, {"type": "error", "msg": "You are not in the current game."})
+                continue
             if not game_started:
-                send_to_player(player_idx, {"type": "error", "msg": "Game has not started yet."})
+                send_json(conn, {"type": "error", "msg": "Game has not started yet."})
                 continue
             if player_idx != current_turn:
-                send_to_player(player_idx, {"type": "error", "msg": "Not your turn."})
+                send_json(conn, {"type": "error", "msg": "Not your turn."})
                 continue
 
             card_index = message.get("card_index")
             if card_index is None or not isinstance(card_index, int):
-                send_to_player(player_idx, {"type": "error", "msg": "Invalid card index."})
+                send_json(conn, {"type": "error", "msg": "Invalid card index."})
                 continue
 
             with clients_lock:
                 hand = clients[player_idx]["hand"]
                 if not 0 <= card_index < len(hand):
-                    send_to_player(player_idx, {"type": "error", "msg": "Invalid card index."})
+                    send_json(conn, {"type": "error", "msg": "Invalid card index."})
                     continue
                 card = hand[card_index]
                 top = discard[-1]
                 if not can_play(card, top, current_color):
-                    send_to_player(player_idx, {"type": "error", "msg": "Illegal card."})
+                    send_json(conn, {"type": "error", "msg": "Illegal card."})
                     continue
 
                 hand.pop(card_index)
@@ -186,7 +214,7 @@ def handle_client(conn, addr):
                 if card[0] == "Black":
                     chosen = message.get("color")
                     if chosen not in ["Red", "Yellow", "Blue", "Green"]:
-                        send_to_player(player_idx, {"type": "error", "msg": "Must choose a valid color for Wild card."})
+                        send_json(conn, {"type": "error", "msg": "Must choose a valid color for Wild card."})
                         hand.insert(card_index, card)
                         discard.pop()
                         continue
@@ -215,7 +243,10 @@ def handle_client(conn, addr):
 
                 if len(hand) == 0:
                     broadcast({"type": "game_over", "winner": name, "msg": f"{name} WINS!!!"})
-                    game_started = False
+                    reset_game()
+                    promote_waiting_clients()
+                    if len(clients) >= MIN_PLAYERS:
+                        start_game()
                     continue
 
                 current_turn = (current_turn + next_turn_offset * direction) % len(clients)
@@ -224,12 +255,13 @@ def handle_client(conn, addr):
         elif msg_type == "draw":
             player_idx = get_player_index(conn)
             if player_idx is None:
-                break
+                send_json(conn, {"type": "error", "msg": "You are not in the current game."})
+                continue
             if not game_started:
-                send_to_player(player_idx, {"type": "error", "msg": "Game has not started yet."})
+                send_json(conn, {"type": "error", "msg": "Game has not started yet."})
                 continue
             if player_idx != current_turn:
-                send_to_player(player_idx, {"type": "error", "msg": "Not your turn."})
+                send_json(conn, {"type": "error", "msg": "Not your turn."})
                 continue
 
             with clients_lock:
@@ -255,14 +287,40 @@ def handle_client(conn, addr):
         if idx is not None:
             left_player = clients.pop(idx)
             broadcast({"type": "info", "msg": f"{left_player['name']} left the game."})
-            if game_started and len(clients) < 2:
+            if game_started and len(clients) < MIN_PLAYERS:
                 broadcast({"type": "info", "msg": "Not enough players — game ended."})
                 reset_game()
-            elif game_started:
-                current_turn = current_turn % len(clients) if clients else 0
-                broadcast_state()
+        else:
+            idx = get_player_index(conn, from_waiting=True)
+            if idx is not None:
+                waiting_clients.pop(idx)
 
     conn.close()
+
+
+def command_loop():
+    while True:
+        try:
+            text = input().strip().lower()
+            if text == "start":
+                if start_game():
+                    print("Game started.")
+                else:
+                    print(f"Need at least {MIN_PLAYERS} players to start.")
+            elif text == "status":
+                with clients_lock:
+                    print(f"Current game players: {len(clients)}")
+                    print(f"Waiting clients: {len(waiting_clients)}")
+                    print(f"Game started: {game_started}")
+            elif text == "help":
+                print("Commands: start, status, help")
+            else:
+                if text:
+                    print("Unknown command. Available: start, status, help")
+        except EOFError:
+            break
+        except Exception:
+            continue
 
 
 def main():
@@ -271,7 +329,9 @@ def main():
     server.bind((HOST, PORT))
     server.listen()
     print(f"Server started → {HOST}:{PORT}")
-    print("Waiting for 2 players... (tell your friend your IP and port)")
+    print("Server commands: start, status, help")
+
+    threading.Thread(target=command_loop, daemon=True).start()
 
     while True:
         conn, addr = server.accept()
