@@ -38,20 +38,39 @@ def broadcast(payload, target_clients=None):
         send_json(client["conn"], payload)
 
 
-def receive_message(conn):
-    try:
-        raw = conn.recv(4096)
-        if not raw:
-            return None
-        text = raw.decode().strip()
-        if not text:
-            return None
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            return text
-    except Exception:
-        return None
+def make_receiver(conn):
+    """
+    Returns a callable that yields one complete, newline-delimited message
+    at a time from `conn`, buffering partial reads and splitting apart
+    multiple messages that arrive in the same recv() call.
+    """
+    buffer = ""
+
+    def receive():
+        nonlocal buffer
+        while True:
+            if "\n" in buffer:
+                line, buffer = buffer.split("\n", 1)
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    return json.loads(line)
+                except json.JSONDecodeError:
+                    return line
+
+            try:
+                raw = conn.recv(4096)
+            except Exception:
+                return None
+            if not raw:
+                return None
+            try:
+                buffer += raw.decode()
+            except UnicodeDecodeError:
+                return None
+
+    return receive
 
 
 def game_state_for_player(idx):
@@ -147,8 +166,10 @@ def get_player_index(conn, from_waiting=False):
 def handle_client(conn, addr):
     global current_turn, direction, game_started
 
+    receive = make_receiver(conn)
+
     send_json(conn, {"type": "prompt", "msg": "Welcome! Enter your name:"})
-    incoming = receive_message(conn)
+    incoming = receive()
     if incoming is None:
         conn.close()
         return
@@ -171,7 +192,7 @@ def handle_client(conn, addr):
                 start_game()
 
     while True:
-        message = receive_message(conn)
+        message = receive()
         if message is None:
             break
 

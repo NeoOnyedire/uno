@@ -170,7 +170,7 @@ def discard_pile():
     discard = [deck.pop(0)]
     card = discard[0]
 
-    starting_color = card[0]  # safe default
+    starting_color = card[0]  # safe default for colored cards
 
     if card[0] == "Black":
         colors = ["Red", "Yellow", "Blue", "Green"]
@@ -187,16 +187,12 @@ def discard_pile():
                     print(f"Starting color set to {colored(starting_color, starting_color)}")
                     time.sleep(0.6)
                     break
-            except:
+            except ValueError:
                 pass
-        print("Invalid → defaulting to Red")
-        time.sleep(0.7)
-        starting_color = "Red"
+            print("Invalid selection, please choose 1-4.")
     elif isinstance(card[1], str):
         print(f"Starting with action card: {card_to_str(card)} — it will affect the first player.")
         time.sleep(1.2)
-    else:
-        starting_color = card[0]
 
     return discard, deck, starting_color
 
@@ -309,11 +305,9 @@ def player_moves(player_hand, discard, deck, current_color):
                                         print(f"→ Color set to {colored(color_choice, color_choice)}")
                                         time.sleep(0.7)
                                         return drawn, color_choice, deck
-                                except:
+                                except ValueError:
                                     pass
-                            print("Invalid → defaulting to Red")
-                            time.sleep(0.7)
-                            return drawn, "Red", deck
+                                print("Invalid selection, please choose 1-4.")
 
                         action = drawn[1] if isinstance(drawn[1], str) else None
                         return drawn, action, deck
@@ -356,11 +350,9 @@ def player_moves(player_hand, discard, deck, current_color):
                                 print(f"→ Color set to {colored(color_choice, color_choice)}")
                                 time.sleep(0.7)
                                 return card_to_play, color_choice, deck
-                        except:
+                        except ValueError:
                             pass
-                    print("Invalid → defaulting to Red")
-                    time.sleep(0.7)
-                    return card_to_play, "Red", deck
+                        print("Invalid selection, please choose 1-4.")
 
                 action = card_to_play[1] if isinstance(card_to_play[1], str) else None
                 return card_to_play, action, deck
