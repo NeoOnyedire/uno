@@ -208,8 +208,27 @@ def can_play(card, discard, current_color):
     return card[0] == "Black" or card[0] == current_color or card[1] == discard[-1][1]
 
 
-def draw_card(deck, hand, count=1):
+def reshuffle_if_needed(deck, discard):
+    """When the deck runs dry, move everything except the current top
+    card from the discard pile back into the deck, shuffled.
+
+    Mutates `deck` and `discard` in place (rather than rebinding the
+    names to new lists) so that every caller holding a reference to
+    either list — not just the one that happened to trigger the
+    reshuffle — sees the correct, up-to-date state afterward.
+    """
+    if not deck and len(discard) > 1:
+        top = discard[-1]
+        remainder = discard[:-1]
+        random.shuffle(remainder)
+        deck.extend(remainder)
+        discard[:] = [top]
+
+
+def draw_card(deck, hand, count=1, discard=None):
     for _ in range(count):
+        if not deck and discard is not None:
+            reshuffle_if_needed(deck, discard)
         if deck:
             hand.append(deck.pop(0))
 
@@ -262,13 +281,8 @@ def player_moves(player_hand, discard, deck, current_color):
             if not deck:
                 print("Deck empty — reshuffling discard pile (except top card)...🔀")
                 time.sleep(1.0)
-                if len(discard) > 1:
-                    top = discard.pop()
-                    random.shuffle(discard)
-                    deck.extend(discard)
-                    discard = [top]
 
-            draw_card(deck, player_hand, 1)
+            draw_card(deck, player_hand, 1, discard=discard)
 
             if player_hand:
                 drawn = player_hand[-1]
@@ -399,7 +413,7 @@ def cpu_moves(cpu_hand, discard, deck, current_color):
 
     print("CPU has no valid cards → draws 1 card.🤔")
     time.sleep(1.1)
-    draw_card(deck, cpu_hand)
+    draw_card(deck, cpu_hand, discard=discard)
 
     if cpu_hand:
         new_card = cpu_hand[-1]
@@ -491,7 +505,7 @@ def gameplay():
 
                 elif action in ["+2", "+4"]:
                     draw_count = 2 if action == "+2" else 4
-                    draw_card(deck, cpu_hand, draw_count)
+                    draw_card(deck, cpu_hand, draw_count, discard=discard)
                     print(f"CPU draws {draw_count} cards!")
                     time.sleep(0.6)
                     skip_next = True
@@ -526,7 +540,7 @@ def gameplay():
 
                 elif action in ["+2", "+4"]:
                     draw_count = 2 if action == "+2" else 4
-                    draw_card(deck, player_hand, draw_count)
+                    draw_card(deck, player_hand, draw_count, discard=discard)
                     print(f"You draw {draw_count} cards!")
                     time.sleep(0.6)
                     skip_next = True
