@@ -49,21 +49,21 @@ def test_card_to_json_round_trips_shape():
     assert gl.card_to_json(("Black", "Wild")) == ["Black", "Wild"]
 
 
-@pytest.mark.xfail(
-    reason=(
-        "json_to_card's ternary `j[1] if isinstance(j[1], int) else j[1]` "
-        "returns j[1] on both branches, so it never actually normalizes "
-        "the value. Currently a no-op; nothing in server.py/client.py "
-        "calls this function today, so it hasn't caused a live bug, but "
-        "the implementation doesn't do what its name/branching implies."
-    ),
-    strict=False,
-)
-def test_json_to_card_normalizes_value_type():
-    # Intent seems to be: pass ints through, and presumably do *something*
-    # different for non-int values. As written it's identical either way.
-    card = gl.json_to_card(["Red", 7])
-    assert card == ("Red", 7)
+def test_json_to_card_converts_number_card():
+    assert gl.json_to_card(["Red", 7]) == ("Red", 7)
+
+
+def test_json_to_card_converts_action_card():
+    assert gl.json_to_card(["Green", "Skip"]) == ("Green", "Skip")
+
+
+def test_json_to_card_converts_wild_card():
+    assert gl.json_to_card(["Black", "Wild"]) == ("Black", "Wild")
+
+
+def test_json_to_card_round_trips_with_card_to_json():
+    for card in [("Red", 7), ("Blue", "Reverse"), ("Black", "+4")]:
+        assert gl.json_to_card(gl.card_to_json(card)) == card
 
 
 def test_colored_wraps_known_color():

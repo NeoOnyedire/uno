@@ -69,4 +69,11 @@ def card_to_json(card):
     return [card[0], card[1]]
 
 def json_to_card(j):
-    return (j[0], j[1] if isinstance(j[1], int) else j[1])
+    """Convert a JSON-decoded [color, value] list back into the
+    (color, value) tuple form used everywhere else in the codebase.
+
+    No type coercion is needed here: json.loads already decodes
+    numbers as int and strings as str, matching card_to_json's output
+    faithfully. This function's only job is list -> tuple.
+    """
+    return (j[0], j[1])
